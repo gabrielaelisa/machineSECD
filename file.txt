@@ -1,0 +1,12 @@
+mov r0, #3
+stmfd r13!, {r0}
+mov r0, #8
+stmfd r13!, {r0}
+mov r0, #6
+stmfd r13!, {r0}
+ldmfd R13!,{r1,r2}
+add r0, r1, r2 
+stmfd r13!,{r0}
+ldmfd R13!,{r1,r2}
+sub r0, r1, r2 
+stmfd r13!,{r0}
