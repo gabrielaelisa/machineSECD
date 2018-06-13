@@ -74,9 +74,13 @@ Instructions
     (sstr s 0)))
 
 
+;; usamos el registro r0 para almacenar temporalmente las constantes
+;; en los registros r1 y r2  guardamos los valores del tope del sp
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 ;; run :: List[Instruction], Stack[Instructions], List -> CONST
 ;; ejecuta la lista de instrucciones con el stack y el ambiente dados
-(define (run ins-list stack env)
+(define (run ins-list stack armStack env)
   ;(debug-run ins-list stack)
   (if (> (stack-size stack) 100)
       (error "STACK_OVERFLOW")
@@ -100,16 +104,28 @@ Instructions
                
                (match ins-list
                  [(list (INT-CONST n) tail ...)
-                  (run tail (stack-push stack (INT-CONST n)) env )]
+                  ;;;;;;;;;;;;; se guarda en el registro r0 el numero, luego se hace un push a el stack
+                  (run tail (stack-push stack (INT-CONST n)) (display (string-append "mov r0, #"(number->string n)
+                                                                                     "\n" "stmfd r13!, {r0}")) env )]
 
                  [(list (ADD) tail ...) (def (INT-CONST n1) (stack-peek stack))
                                         (def (INT-CONST n2) (stack-peek (stack-pop stack)))
                                         (def new-stack (stack-pop (stack-pop stack)))
-                                        (run tail (stack-push new-stack (INT-CONST (+ n2 n1))) env )]
+                                        ;;;; se hace un load multiple del stack a los registros r1 y r2
+                                        (run tail (stack-push new-stack (INT-CONST (+ n2 n1)))
+                                             (display (string-append "ldmfd R13!,{r1,r2}\n" 
+                                                                     "add r0, r1, r2 \n"
+                                                                     "stmfd r13!,{r0}"))
+                                             env )]
                  [(list (SUB) tail ...) (def (INT-CONST n1) (stack-peek stack))
                                         (def (INT-CONST n2) (stack-peek (stack-pop stack)))
                                         (def new-stack (stack-pop (stack-pop stack)))
-                                        (run tail (stack-push new-stack (INT-CONST (- n1 n2))) env )]
+                                        (run tail (stack-push new-stack (INT-CONST (- n1 n2)))
+                                        ;;;;;; se hace un load multiple igual que en la suma
+                                             (display(string-append "ldmfd R13!,{r1,r2}\n"
+                                                                    "sub r0, r1, r2 \n"
+                                                                    "stmfd r13!,{r0}"))
+                                             env )]
        
                  )))])))
 
@@ -118,7 +134,9 @@ Instructions
 ;; machine :: List[Instruction] -> Expr
 ;; ejecuta la lista de instrucciones en una maquina con stack y ambiente vacios
 (define (machine ins-list)
-  (run ins-list (stack-init) '()))
+  (run ins-list (stack-init)(display ".text\n
+.global main\n.extern printf\nmain:\n
+ ")'()))
 
 (define (new-line s) (string-append s "\n") )
 

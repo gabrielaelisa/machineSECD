@@ -9,7 +9,7 @@
 Instructions
 |#
 (deftype Instruction
-  (INT-CONST n) 
+  (INT_CONST n) 
   (ADD)
   (SUB)
   (CLOSURE ins))
@@ -87,7 +87,10 @@ Instructions
       (match ins-list
         ['() (if (= 1 (stack-size stack))
                  (match (stack-peek stack)
-                   [(INT-CONST n) n]
+                   [(INT_CONST n) (end n (display (string-append "     bl printf\n"
+                                                                 "     ldmfd sp!, {pc}\n"
+                                                                 ".data\n"
+                                                                 "string: .asciz \"%d\\n\"")))]
                    [(closureV ins env) (closureV ins env)]
                    [e "CORRUPT_ENDING_STATE"])
                  (error "CORRUPT_ENDING_STATE")
@@ -103,28 +106,28 @@ Instructions
              (with-handlers ([non-local-exn? fault])
                
                (match ins-list
-                 [(list (INT-CONST n) tail ...)
-                  ;;;;;;;;;;;;; se guarda en el registro r0 el numero, luego se hace un push a el stack
-                  (run tail (stack-push stack (INT-CONST n)) (display (string-append "mov r0, #"(number->string n)
-                                                                                     "\n" "stmfd r13!, {r0}")) env )]
+                 [(list (INT_CONST n) tail ...)
+                  ;;;;;;;;;;;;; se guarda en el registro r1 el numero, luego se hace un push a el stack
+                  (run tail (stack-push stack (INT_CONST n)) (display (string-append "     mov r1, #"(number->string n)
+                                                                                     "\n     stmfd r13!, {r1}")) env )]
 
-                 [(list (ADD) tail ...) (def (INT-CONST n1) (stack-peek stack))
-                                        (def (INT-CONST n2) (stack-peek (stack-pop stack)))
+                 [(list (ADD) tail ...) (def (INT_CONST n1) (stack-peek stack))
+                                        (def (INT_CONST n2) (stack-peek (stack-pop stack)))
                                         (def new-stack (stack-pop (stack-pop stack)))
-                                        ;;;; se hace un load multiple del stack a los registros r1 y r2
-                                        (run tail (stack-push new-stack (INT-CONST (+ n2 n1)))
-                                             (display (string-append "ldmfd R13!,{r1,r2}\n" 
-                                                                     "add r0, r1, r2 \n"
-                                                                     "stmfd r13!,{r0}"))
+                                        ;;;;load multiple del stack a los registros r2 y r3 primero se llena r3 (decendiente)
+                                        (run tail (stack-push new-stack (INT_CONST (+ n2 n1)))
+                                             (display (string-append "     ldmfd R13!,{r2,r3}\n" 
+                                                                     "     add r1, r3, r2 \n"
+                                                                     "     stmfd r13!,{r1}"))
                                              env )]
-                 [(list (SUB) tail ...) (def (INT-CONST n1) (stack-peek stack))
-                                        (def (INT-CONST n2) (stack-peek (stack-pop stack)))
+                 [(list (SUB) tail ...) (def (INT_CONST n1) (stack-peek stack))
+                                        (def (INT_CONST n2) (stack-peek (stack-pop stack)))
                                         (def new-stack (stack-pop (stack-pop stack)))
-                                        (run tail (stack-push new-stack (INT-CONST (- n1 n2)))
+                                        (run tail (stack-push new-stack (INT_CONST (- n1 n2)))
                                         ;;;;;; se hace un load multiple igual que en la suma
-                                             (display(string-append "ldmfd R13!,{r1,r2}\n"
-                                                                    "sub r0, r1, r2 \n"
-                                                                    "stmfd r13!,{r0}"))
+                                             (display(string-append "     ldmfd R13!,{r2,r3}\n"
+                                                                    "     sub r1, r3, r2 \n"
+                                                                    "     stmfd r13!,{r1}"))
                                              env )]
        
                  )))])))
@@ -134,14 +137,31 @@ Instructions
 ;; machine :: List[Instruction] -> Expr
 ;; ejecuta la lista de instrucciones en una maquina con stack y ambiente vacios
 (define (machine ins-list)
-  (run ins-list (stack-init)'() '()))
+  (run ins-list (stack-init)(display
+".text
+.global main
+.extern printf
+main:
+     stmfd sp!, {lr}
+     ldr r0, =string")'()))
 
+;;end :: number, function -> number
+;;retorna el número y se ejecuta pasivamente la función
+(define (end n file) n)
 (define (new-line s) (string-append s "\n") )
 
 (define (display exp)
   ( display-to-file (new-line exp)
-       "file.txt"
+       "file.s"
        #:mode 'text
        #:exists 'append))
+
+(define (displaySymbol exp)
+  ( display-to-file exp
+       "file.s"
+       #:mode 'binary
+       #:exists 'append))
+
+
   
        
