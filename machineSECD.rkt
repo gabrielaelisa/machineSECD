@@ -12,9 +12,6 @@ Instructions
   (INT_CONST n) 
   (ADD)
   (SUB))
-;; values
-(deftype Val
-  (closureV body env))
 
 
 #|
@@ -78,7 +75,7 @@ Instructions
 
 ;; run :: List[Instruction], Stack[Instructions], List -> CONST
 ;; ejecuta la lista de instrucciones con el stack y el ambiente dados
-(define (run ins-list stack armStack env)
+(define (run ins-list stack armStack)
   ;(debug-run ins-list stack)
   (if (> (stack-size stack) 100)
       (error "STACK_OVERFLOW")
@@ -90,7 +87,6 @@ Instructions
                                                                  "     ldmfd sp!, {pc}\n"
                                                                  ".data\n"
                                                                  "string: .asciz \"%d\\n\"")))]
-                   [(closureV ins env) (closureV ins env)]
                    [e "CORRUPT_ENDING_STATE"])
                  (error "CORRUPT_ENDING_STATE")
                  ;stack
@@ -108,7 +104,7 @@ Instructions
                  [(list (INT_CONST n) tail ...)
                   ;;;;;;;;;;;;; se guarda en el registro r1 el numero, luego se hace un push a el stack
                   (run tail (stack-push stack (INT_CONST n)) (display (string-append "     mov r1, #"(number->string n)
-                                                                                     "\n     stmfd r13!, {r1}")) env )]
+                                                                                     "\n     stmfd r13!, {r1}")))]
 
                  [(list (ADD) tail ...) (def (INT_CONST n1) (stack-peek stack))
                                         (def (INT_CONST n2) (stack-peek (stack-pop stack)))
@@ -118,7 +114,7 @@ Instructions
                                              (display (string-append "     ldmfd r13!,{r2,r3}\n" 
                                                                      "     add r1, r2, r3 \n"
                                                                      "     stmfd r13!,{r1}"))
-                                             env )]
+                                         )]
                  [(list (SUB) tail ...) (def (INT_CONST n1) (stack-peek stack))
                                         (def (INT_CONST n2) (stack-peek (stack-pop stack)))
                                         (def new-stack (stack-pop (stack-pop stack)))
@@ -127,7 +123,7 @@ Instructions
                                              (display(string-append "     ldmfd r13!,{r2,r3}\n"
                                                                     "     sub r1, r2, r3 \n"
                                                                     "     stmfd r13!,{r1}"))
-                                             env )]
+                                          )]
        
                  )))])))
 
@@ -143,7 +139,7 @@ Instructions
 .extern printf
 main:
      stmfd sp!, {lr}
-     ldr r0, =string")'()))
+     ldr r0, =string")))
 
 ;;end :: number, function -> number
 ;;retorna el número y se ejecuta pasivamente la función
