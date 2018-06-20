@@ -10,14 +10,14 @@ main:
      stmfd r13!, {r1}
      mov r1, #6
      stmfd r13!, {r1}
-     ldmfd R13!,{r2,r3}
-     add r1, r3, r2 
+     ldmfd r13!,{r2,r3}
+     add r1, r2, r3 
      stmfd r13!,{r1}
-     ldmfd R13!,{r2,r3}
-     sub r1, r3, r2 
+     ldmfd r13!,{r2,r3}
+     sub r1, r2, r3 
      stmfd r13!,{r1}
+     ldmfd r13!, {r1}
      bl printf
      ldmfd sp!, {pc}
 .data
-string: .asciz "%d
-"
+string: .asciz "%d\n"

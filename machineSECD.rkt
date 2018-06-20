@@ -11,9 +11,7 @@ Instructions
 (deftype Instruction
   (INT_CONST n) 
   (ADD)
-  (SUB)
-  (CLOSURE ins))
-
+  (SUB))
 ;; values
 (deftype Val
   (closureV body env))
@@ -87,7 +85,8 @@ Instructions
       (match ins-list
         ['() (if (= 1 (stack-size stack))
                  (match (stack-peek stack)
-                   [(INT_CONST n) (end n (display (string-append "     bl printf\n"
+                   [(INT_CONST n) (end n (display (string-append "     ldmfd r13!, {r1}\n" ;carga el resultado final en r1
+                                                                 "     bl printf\n"
                                                                  "     ldmfd sp!, {pc}\n"
                                                                  ".data\n"
                                                                  "string: .asciz \"%d\\n\"")))]
@@ -116,8 +115,8 @@ Instructions
                                         (def new-stack (stack-pop (stack-pop stack)))
                                         ;;;;load multiple del stack a los registros r2 y r3 primero se llena r3 (decendiente)
                                         (run tail (stack-push new-stack (INT_CONST (+ n2 n1)))
-                                             (display (string-append "     ldmfd R13!,{r2,r3}\n" 
-                                                                     "     add r1, r3, r2 \n"
+                                             (display (string-append "     ldmfd r13!,{r2,r3}\n" 
+                                                                     "     add r1, r2, r3 \n"
                                                                      "     stmfd r13!,{r1}"))
                                              env )]
                  [(list (SUB) tail ...) (def (INT_CONST n1) (stack-peek stack))
@@ -125,8 +124,8 @@ Instructions
                                         (def new-stack (stack-pop (stack-pop stack)))
                                         (run tail (stack-push new-stack (INT_CONST (- n1 n2)))
                                         ;;;;;; se hace un load multiple igual que en la suma
-                                             (display(string-append "     ldmfd R13!,{r2,r3}\n"
-                                                                    "     sub r1, r3, r2 \n"
+                                             (display(string-append "     ldmfd r13!,{r2,r3}\n"
+                                                                    "     sub r1, r2, r3 \n"
                                                                     "     stmfd r13!,{r1}"))
                                              env )]
        
@@ -136,6 +135,7 @@ Instructions
 ;machine
 ;; machine :: List[Instruction] -> Expr
 ;; ejecuta la lista de instrucciones en una maquina con stack y ambiente vacios
+;; crea un archivo en ARM con las instrucciones a ejecutar
 (define (machine ins-list)
   (run ins-list (stack-init)(display
 ".text
